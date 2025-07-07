@@ -6,6 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.constants import ChatAction  # ✅ добавлен правильный импорт
 
 # Загрузка ключей
 load_dotenv()
@@ -89,7 +90,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_markdown(script)
 
 async def script(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.chat.send_action(action="typing")
+    await update.message.chat.send_action(action=ChatAction.TYPING)  # ✅ исправлено
     text = generate_script()
     await update.message.reply_markdown(text)
 
@@ -98,4 +99,5 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("script", script))
     app.add_handler(CallbackQueryHandler(button))
+    print("Bot started!")  # ✅ лог старта
     app.run_polling()
