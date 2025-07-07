@@ -6,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-from telegram.constants import ChatAction  # ✅ добавлен правильный импорт
+from telegram.constants import ChatAction
 
 # Загрузка ключей
 load_dotenv()
@@ -40,13 +40,14 @@ ADVICE = [
 ]
 
 def generate_script(selected_topic=None):
-    topic = selected_topic if selected_topic else random.choice(list(TOPICS.keys()))
-    title = random.choice(TOPICS[topic])
-    hook = random.choice(HOOKS)
-    core = random.choice(CORES)
-    advice = random.choice(ADVICE)
+    try:
+        topic = selected_topic if selected_topic else random.choice(list(TOPICS.keys()))
+        title = random.choice(TOPICS[topic])
+        hook = random.choice(HOOKS)
+        core = random.choice(CORES)
+        advice = random.choice(ADVICE)
 
-    prompt = f"""
+        prompt = f"""
 Ты — сценарист для Instagram Reels. Напиши короткий (60–90 сек) речевой текст от первого лица, живым языком.
 Тема: {title}
 Смысл: {core}
@@ -62,21 +63,27 @@ def generate_script(selected_topic=None):
 Язык: русский, тон — личный, энергичный, уверенный.
 """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "Ты сценарист, маркетолог и психолог. Пиши цепко и лаконично."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.85,
-        max_tokens=400
-    )
+        logging.info(f"Отправляю запрос в OpenAI по теме: {title}")
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Ты сценарист, маркетолог и психолог. Пиши цепко и лаконично."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.85,
+            max_tokens=400
+        )
 
-    text = response['choices'][0]['message']['content']
-    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M")
-    return f"🧠 *AI-Сценарий для Reels*\n📌 *{title}*\n🕒 {timestamp}\n\n{text}"
+        text = response['choices'][0]['message']['content']
+        timestamp = datetime.now().strftime("%d.%m.%Y %H:%M")
+        logging.info("Получил ответ от OpenAI")
+        return f"🧠 *AI-Сценарий для Reels*\n📌 *{title}*\n🕒 {timestamp}\n\n{text}"
+    except Exception as e:
+        logging.error(f"Ошибка при генерации сценария: {e}")
+        return "❌ Ошибка при генерации сценария. Попробуйте позже."
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logging.info(f"User {update.effective_user.id} вызвал /start")
     keyboard = [[InlineKeyboardButton(topic, callback_data=topic)] for topic in TOPICS.keys()]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привет! Выбери тему, по которой сгенерировать сценарий:", reply_markup=reply_markup)
@@ -85,12 +92,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     topic = query.data
+    logging.info(f"Пользователь выбрал тему: {topic}")
     await query.edit_message_text(text=f"Генерирую сценарий по теме: {topic}...")
     script = generate_script(topic)
     await query.message.reply_markdown(script)
 
 async def script(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.chat.send_action(action=ChatAction.TYPING)  # ✅ исправлено
+    logging.info(f"User {update.effective_user.id} вызвал /script")
+    await update.message.chat.send_action(action=ChatAction.TYPING)
     text = generate_script()
     await update.message.reply_markdown(text)
 
@@ -99,5 +108,5 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("script", script))
     app.add_handler(CallbackQueryHandler(button))
-    print("Bot started!")  # ✅ лог старта
+    logging.info("Bot started!")
     app.run_polling()
