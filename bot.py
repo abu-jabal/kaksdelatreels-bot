@@ -1,5 +1,4 @@
 import logging
-import openai
 import random
 import os
 from datetime import datetime
@@ -7,13 +6,20 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from telegram.constants import ChatAction
+from openai import OpenAI
 
-# Загрузка ключей
+# Загрузка ключей из .env
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# Инициализация клиента OpenAI
+client = OpenAI(api_key=openai_api_key)
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 TOPICS = {
     "Психология": ["Почему прокрастинация — это не лень", "Как управлять эмоциями за 15 секунд"],
@@ -64,7 +70,7 @@ def generate_script(selected_topic=None):
 """
 
         logging.info(f"Отправляю запрос в OpenAI по теме: {title}")
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Ты сценарист, маркетолог и психолог. Пиши цепко и лаконично."},
@@ -110,3 +116,4 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(button))
     logging.info("Bot started!")
     app.run_polling()
+
