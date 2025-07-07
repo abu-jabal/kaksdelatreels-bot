@@ -64,7 +64,7 @@ def generate_script(selected_topic=None):
 """
 
         logging.info(f"Отправляю запрос в OpenAI по теме: {title}")
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Ты сценарист, маркетолог и психолог. Пиши цепко и лаконично."},
@@ -74,7 +74,7 @@ def generate_script(selected_topic=None):
             max_tokens=400
         )
 
-        text = response['choices'][0]['message']['content']
+        text = response.choices[0].message.content
         timestamp = datetime.now().strftime("%d.%m.%Y %H:%M")
         logging.info("Получил ответ от OpenAI")
         return f"🧠 *AI-Сценарий для Reels*\n📌 *{title}*\n🕒 {timestamp}\n\n{text}"
